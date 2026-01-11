@@ -1,0 +1,27 @@
+{
+    "name": "server",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.948.0",
+        "axios": "^1.13.2",
+        "bcryptjs": "^3.0.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.6.1",
+        "express": "^4.21.2",
+        "jsonwebtoken": "^9.0.2",
+        "mongoose": "^9.0.0",
+        "multer": "^2.0.2",
+        "multer-s3": "^3.0.1",
+        "nodemailer": "^7.0.12",
+        "pdfkit": "^0.17.2",
+        "stripe": "^14.10.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.11"
+    }
+}
