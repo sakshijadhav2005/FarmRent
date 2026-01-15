@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Tractor, Menu, X, LogOut, User, List, Calendar, Settings, BarChart3, Users, Heart, Linkedin, Github, UserCheck, Sun, Mic } from 'lucide-react';
+import { Tractor, Menu, X, LogOut, User, List, Calendar, Settings, BarChart3, Users, Heart, Linkedin, Github, UserCheck, Sun, Mic, Stethoscope } from 'lucide-react';
 
 // ... (rest of imports)
 
@@ -39,8 +39,10 @@ const MainLayout = () => {
 
     const navItems = [
         { path: '/dashboard', labelKey: 'nav.dashboard', icon: BarChart3, roles: ['farmer', 'owner'] },
-        { path: '/work-planner', labelKey: 'nav.workPlanner', icon: Sun, roles: ['farmer'] },
-        { path: '/voice-assistant', labelKey: 'nav.voiceAssistant', icon: Mic, roles: ['farmer', 'owner'] },
+        // Work Planner - Weather-based farming activity planner (separate from Voice Assistant)
+        { path: '/work-planner', labelKey: 'nav.workPlanner', icon: Sun, roles: ['farmer', 'owner'] },
+        // Voice Assistant - AI-powered voice interaction (separate from Work Planner)
+        { path: '/voice-assistant', labelKey: 'nav.voiceAssistant', icon: Mic, roles: ['farmer', 'owner', 'worker'] },
         { path: '/addequipment', labelKey: 'nav.myEquipment', icon: Tractor, roles: ['owner'] },
         { path: '/find-workers', labelKey: 'nav.findWorkers', icon: Users, roles: ['farmer', 'owner'] },
         { path: '/worker-details', labelKey: 'dashboard.workRequests', icon: UserCheck, roles: ['farmer', 'owner'] },

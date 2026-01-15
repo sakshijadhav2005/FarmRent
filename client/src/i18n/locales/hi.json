@@ -27,7 +27,8 @@
         "completed": "पूर्ण",
         "cancelled": "रद्द",
         "perHour": "/घंटा",
-        "perDay": "/दिन"
+        "perDay": "/दिन",
+        "processing": "प्रोसेसिंग..."
     },
     "nav": {
         "home": "होम",
@@ -101,13 +102,35 @@
         "farmer": "किसान",
         "owner": "उपकरण मालिक",
         "worker": "खेत मजदूर",
+        "admin": "प्रशासक",
         "forgotPassword": "पासवर्ड भूल गए?",
         "noAccount": "खाता नहीं है?",
         "hasAccount": "पहले से खाता है?",
         "signUp": "साइन अप",
         "signIn": "साइन इन",
         "loginSuccess": "लॉगिन सफल!",
-        "registerSuccess": "पंजीकरण सफल!"
+        "registerSuccess": "पंजीकरण सफल!",
+        "signInWithGoogle": "Google से साइन इन करें",
+        "signUpWithGoogle": "Google से साइन अप करें",
+        "orContinueWith": "या जारी रखें",
+        "selectRole": "अपनी भूमिका चुनें",
+        "completeProfile": "अपनी प्रोफ़ाइल पूरी करें"
+    },
+    "selectRole": {
+        "title": "अपनी भूमिका चुनें",
+        "subtitle": "FarmLink का उपयोग कैसे करना चाहते हैं चुनें",
+        "continue": "जारी रखें",
+        "info": "आप बाद में अपनी प्रोफाइल सेटिंग्स से अपनी भूमिका बदल सकते हैं"
+    },
+    "roles": {
+        "farmer": "किसान",
+        "farmerDesc": "अपनी खेती की जरूरतों के लिए उपकरण किराए पर लें",
+        "owner": "उपकरण मालिक",
+        "ownerDesc": "अपने खेती उपकरण सूचीबद्ध करें और किराए पर दें",
+        "worker": "खेत मजदूर",
+        "workerDesc": "खेतों में काम के अवसर खोजें",
+        "driver": "ड्राइवर",
+        "driverDesc": "उपकरण और सामान का परिवहन करें"
     },
     "dashboard": {
         "title": "डैशबोर्ड अवलोकन",
@@ -243,6 +266,7 @@
         "saved": "सेटिंग्स सफलतापूर्वक सहेजी गई!"
     },
     "errors": {
+        "selectRole": "जारी रखने के लिए कृपया एक भूमिका चुनें",
         "required": "यह फ़ील्ड आवश्यक है",
         "invalidEmail": "कृपया वैध ईमेल दर्ज करें",
         "passwordMismatch": "पासवर्ड मेल नहीं खाते",
@@ -280,7 +304,25 @@
             "sowing": "बुवाई/रोपण",
             "ploughing": "जुताई/खेत तैयार करना",
             "irrigation": "सिंचाई (पानी देना)"
-        }
+        },
+        "conditions": "स्थितियां",
+        "speakResult": "परिणाम बोलें",
+        "stopSpeaking": "बोलना बंद करें",
+        "selectLanguage": "भाषा चुनें",
+        "stepByStep": "चरण-दर-चरण मार्गदर्शिका",
+        "optimalTiming": "सर्वोत्तम समय",
+        "equipmentTips": "उपकरण सुझाव",
+        "localWisdom": "स्थानीय खेती ज्ञान",
+        "expectedOutcome": "अपेक्षित परिणाम",
+        "weatherImpact": "मौसम प्रभाव विश्लेषण",
+        "marketInsights": "बाजार जानकारी",
+        "downloadReport": "रिपोर्ट डाउनलोड करें",
+        "downloading": "डाउनलोड हो रहा है...",
+        "pleaseWait": "कृपया प्रतीक्षा करें...",
+        "weeklyForecast": "7-दिन का मौसम पूर्वानुमान",
+        "idealDays": "आदर्श दिन",
+        "rainyDays": "बारिश के दिन",
+        "bestDays": "काम के लिए सर्वोत्तम दिन"
     },
     "voiceAssistant": {
         "title": "वॉइस असिस्टेंट",

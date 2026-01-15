@@ -68,6 +68,34 @@ export const loginUser = async (formData) => {
     }
 };
 
+// Google OAuth Login
+export const googleLogin = async (credential) => {
+    try {
+        const response = await api.post("/auth/google", { credential });
+        return response.data;
+    } catch (error) {
+        console.error("API GOOGLE LOGIN ERROR:", error);
+        return {
+            success: false,
+            message: error.response?.data?.message || "Google login failed"
+        };
+    }
+};
+
+// Complete Google Profile with Role Selection
+export const completeGoogleProfile = async (role) => {
+    try {
+        const response = await api.post("/auth/google/complete-profile", { role });
+        return response.data;
+    } catch (error) {
+        console.error("API COMPLETE GOOGLE PROFILE ERROR:", error);
+        return {
+            success: false,
+            message: error.response?.data?.message || "Failed to complete profile"
+        };
+    }
+};
+
 
 // Get all equipment
 export const getEquipment = () => api.get("/equipment");
@@ -153,6 +181,8 @@ export const getChatHistory = () => api.get('/chat/history');
 export const getChatSession = (id) => api.get(`/chat/session/${id}`);
 export const deleteChatSession = (id) => api.delete(`/chat/session/${id}`);
 export const getChatSuggestions = () => api.get('/chat/suggestions');
+export const analyzeCropImage = (base64Image, mimeType, message) =>
+    api.post('/chat/analyze-image', { base64Image, mimeType, message });
 
 // Admin API
 export const getAdminAnalytics = () => api.get('/admin/analytics');

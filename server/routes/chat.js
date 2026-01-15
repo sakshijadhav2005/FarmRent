@@ -6,7 +6,8 @@ const {
     getChatHistory,
     getSession,
     deleteSession,
-    getSuggestions
+    getSuggestions,
+    analyzeCropImage
 } = require('../controllers/chatController');
 
 // Public route
@@ -14,6 +15,7 @@ router.get('/suggestions', getSuggestions);
 
 // Protected routes
 router.post('/', protect, sendMessage);
+router.post('/analyze-image', protect, analyzeCropImage);
 router.get('/history', protect, getChatHistory);
 router.get('/session/:id', protect, getSession);
 router.delete('/session/:id', protect, deleteSession);

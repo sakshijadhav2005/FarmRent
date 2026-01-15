@@ -238,12 +238,52 @@ exports.getCurrentWeather = async (req, res) => {
 };
 
 /**
- * Get weather-based booking recommendation
- * @route POST /api/weather/recommend
+ * Get multi-day farming plan
+ * @route POST /api/weather/plan
  */
+exports.getMultiDayPlan = async (req, res) => {
+    try {
+        const { location, startDate, days = 7, equipmentType, activity } = req.body;
+
+        if (!location || !startDate || !equipmentType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Location, start date, and equipment type are required'
+            });
+        }
+
+        // Import research agent
+        const researchAgent = require('../services/researchService');
+
+        console.log(`🗓️ Generating ${days}-day plan for ${equipmentType} in ${location}`);
+
+        // Generate multi-day plan
+        const multiDayPlan = await researchAgent.researchMultiDayPlan(
+            location,
+            activity || `${equipmentType} operations`,
+            equipmentType,
+            startDate,
+            parseInt(days)
+        );
+
+        console.log(`📅 Plan generated with ${multiDayPlan.dailyPlans.length} days`);
+
+        res.json({
+            success: true,
+            data: multiDayPlan
+        });
+
+    } catch (error) {
+        console.error('Multi-day plan error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate multi-day plan'
+        });
+    }
+};
 exports.getBookingRecommendation = async (req, res) => {
     try {
-        const { location, startDate, endDate, equipmentType } = req.body;
+        const { location, startDate, endDate, equipmentType, language } = req.body;
 
         // Get forecast for the location
         let forecastData;
@@ -256,9 +296,21 @@ exports.getBookingRecommendation = async (req, res) => {
         // Analyze selected dates
         const start = new Date(startDate);
         const end = new Date(endDate);
+        console.log("Start date:", start);
+        console.log("End date:", end);
+        console.log("Forecast dates:", forecastData.forecast.map(day => ({
+            timestamp: day.date,
+            date: new Date(day.date * 1000),
+            dayName: day.dateInfo.dayName
+        })));
         const selectedDays = forecastData.forecast.filter(day => {
             const dayDate = new Date(day.date * 1000);
-            return dayDate >= start && dayDate <= end;
+            // Compare only the date parts (ignore time)
+            const dayDateOnly = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate());
+            const startDateOnly = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            console.log(`Comparing ${dayDateOnly.toDateString()} >= ${startDateOnly.toDateString()} && ${dayDateOnly.toDateString()} <= ${endDateOnly.toDateString()}`);
+            return dayDateOnly >= startDateOnly && dayDateOnly <= endDateOnly;
         });
 
         // 1. Calculate Score (Code Logic)
@@ -274,46 +326,62 @@ exports.getBookingRecommendation = async (req, res) => {
         let suggestions = [];
         let recommendation = '';
 
-        // Import here to ensure it's available without messing up top of file in this tool call
+        // Import services
         const aiService = require('../services/aiService');
+        const researchAgent = require('../services/researchService');
 
-        // If we have an AI Key, ask Gemini for the text parts
-        if (process.env.GEMINI_API_KEY && selectedDays.length > 0) {
-            const context = {
+        // Enhanced research-based recommendation
+        console.log("Selected days length:", selectedDays.length);
+        console.log("Selected days:", selectedDays);
+
+        // Always perform research for better recommendations (simplified)
+        try {
+            console.log("🔍 Starting research agent analysis...");
+            const researchFindings = await researchAgent.researchFarmingConditions(
                 location,
-                activity: `Using ${equipmentType}`,
-                weather: selectedDays.map(d => `${d.dateInfo.dayName}: ${d.weather.description}, Temp: ${d.temperature.avg}C, Rain: ${d.precipitation}%, Wind: ${d.windSpeed}km/h`)
-            };
+                `${equipmentType} operations`,
+                equipmentType, // equipment type twice was wrong
+                startDate,
+                language // Pass language to research service
+            );
 
-            const prompt = `Analyze farming feasibility for "${context.activity}" in "${context.location}".
-            Forecast: ${JSON.stringify(context.weather)}.
-            
-            Provide response in valid JSON format ONLY:
-            {
-                "recommendation": "One sentence summary advising the user.",
-                "warnings": ["Warning 1", "Warning 2"],
-                "suggestions": ["Tip 1", "Tip 2"]
-            }`;
+            console.log("📊 Research findings:", researchFindings);
 
-            try {
-                console.log("Sending prompt to Gemini...");
-                const aiText = await aiService.generateAIResponse(prompt);
-                console.log("Raw AI Response:", aiText);
+            // Use research findings to enhance recommendations
+            if (researchFindings.aiRecommendation) {
+                recommendation = researchFindings.aiRecommendation.recommendation || recommendation;
+                warnings = [...warnings, ...(researchFindings.aiRecommendation.warnings || [])];
+                suggestions = [...suggestions, ...(researchFindings.aiRecommendation.suggestions || [])];
 
-                // Simple attempt to parse JSON from AI (it might wrap in markdown)
-                const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const aiData = JSON.parse(jsonMatch[0]);
-                    recommendation = aiData.recommendation;
-                    warnings = aiData.warnings || [];
-                    suggestions = aiData.suggestions || [];
-                } else {
-                    console.log("Failed to extract JSON from response. Raw text:", aiText);
-                    recommendation = aiText.slice(0, 150);
+                // Add market insights as suggestions
+                if (researchFindings.aiRecommendation.marketInsights) {
+                    suggestions = [...suggestions, ...researchFindings.aiRecommendation.marketInsights];
                 }
-            } catch (err) {
-                console.error("AI Generation failed:", err.message);
             }
+        } catch (researchError) {
+            console.error("Research agent failed:", researchError.message);
+            // Provide fallback data
+            recommendation = `Good conditions expected for ${equipmentType} operations in ${location}`;
+            suggestions = [
+                `Monitor weather conditions before starting ${equipmentType} operations`,
+                `Check equipment maintenance before use`,
+                `Plan operations during optimal daylight hours`
+            ];
+        }
+
+        // Ensure we have proper data even if research fails
+        if (!recommendation) {
+            recommendation = avgScore >= 3 ? '✅ Good time for booking!' : '⚠️ Consider alternative dates for better conditions';
+        }
+
+        // Add some default warnings and suggestions if none exist
+        if (warnings.length === 0 && avgScore < 3) {
+            warnings.push('Weather conditions may not be optimal for operations');
+        }
+
+        if (suggestions.length === 0) {
+            suggestions.push('Check local weather forecast before operations');
+            suggestions.push('Ensure equipment is properly maintained');
         }
 
         // 3. Fallback / Augment Rule-Based Logic if AI didn't return (or key missing)
@@ -332,14 +400,121 @@ exports.getBookingRecommendation = async (req, res) => {
             recommendation = avgScore >= 3 ? '✅ Good time for booking!' : '⚠️ Consider alternative dates for better conditions';
         }
 
+        // Get AI-enhanced comprehensive response
+        let stepByStepGuide = [];
+        let optimalTiming = null;
+        let equipmentTips = [];
+        let localWisdom = '';
+        let expectedOutcome = '';
+        let weatherImpact = null;
+        let marketInsights = [];
+
+        // Try to get enhanced response from research service
+        try {
+            const researchAgent = require('../services/researchService');
+            const researchFindings = await researchAgent.researchFarmingConditions(
+                location,
+                `${equipmentType} operations`,
+                equipmentType,
+                startDate
+            );
+
+            if (researchFindings.aiRecommendation) {
+                const ai = researchFindings.aiRecommendation;
+                recommendation = ai.recommendation || recommendation;
+                stepByStepGuide = ai.stepByStepGuide || [];
+                optimalTiming = ai.optimalTiming || null;
+                equipmentTips = ai.equipmentTips || [];
+                localWisdom = ai.localWisdom || '';
+                expectedOutcome = ai.expectedOutcome || '';
+                weatherImpact = ai.weatherImpact || null;
+                marketInsights = ai.marketInsights || [];
+
+                // Merge warnings and suggestions
+                if (ai.warnings && ai.warnings.length > 0) {
+                    warnings = [...new Set([...warnings, ...ai.warnings])];
+                }
+                if (ai.suggestions && ai.suggestions.length > 0) {
+                    suggestions = [...new Set([...suggestions, ...ai.suggestions])];
+                }
+            }
+        } catch (err) {
+            console.log('Enhanced response failed, using basic response:', err.message);
+        }
+
+        // Provide defaults if not set
+        if (!stepByStepGuide || stepByStepGuide.length === 0) {
+            stepByStepGuide = [
+                `Step 1: Check weather conditions early morning and ensure ${equipmentType} is fueled`,
+                `Step 2: Start ${equipmentType} operations from the most accessible field area at 6-7 AM`,
+                `Step 3: Take a break during peak heat (12-2 PM) to rest operators and refuel`,
+                `Step 4: Resume operations in the afternoon (3-6 PM) for remaining areas`,
+                `Step 5: Clean and store ${equipmentType} properly after use`
+            ];
+        }
+
+        if (!optimalTiming) {
+            optimalTiming = {
+                bestHours: '6:00 AM - 10:00 AM',
+                reason: 'Cooler temperatures and lower humidity for better efficiency',
+                avoidHours: '12:00 PM - 3:00 PM (Peak heat causes operator fatigue)'
+            };
+        }
+
+        if (!equipmentTips || equipmentTips.length === 0) {
+            equipmentTips = [
+                `Check ${equipmentType} oil level and tire pressure before starting`,
+                `Warm up engine for 2-3 minutes before heavy operations`,
+                `Use appropriate speed and settings for current field conditions`,
+                `Clean air filters if operating in dusty conditions`
+            ];
+        }
+
+        if (!localWisdom) {
+            localWisdom = `Experienced farmers in ${location} typically start their ${equipmentType} work early in the morning when dew has just dried, ensuring optimal soil and crop conditions for the activity.`;
+        }
+
+        if (!expectedOutcome) {
+            expectedOutcome = `Following this plan should result in efficient ${equipmentType} operations with minimal equipment wear and better productivity. Expected 15-20% improvement over unplanned operations.`;
+        }
+
+        if (!weatherImpact) {
+            weatherImpact = {
+                currentConditions: `Weather appears ${suitability.toLowerCase()} for ${equipmentType} operations`,
+                preparation: 'Check local weather updates before starting. Keep rain gear and equipment covers ready.',
+                contingency: 'If weather changes suddenly, pause operations and secure equipment'
+            };
+        }
+
         res.json({
             success: true,
             data: {
+                // Basic response
                 overallScore,
                 suitability,
                 warnings,
                 suggestions,
-                recommendation
+                recommendation,
+
+                // Enhanced response
+                stepByStepGuide,
+                optimalTiming,
+                equipmentTips,
+                localWisdom,
+                expectedOutcome,
+                weatherImpact,
+                marketInsights,
+
+                // 7-day weather forecast
+                forecast: forecastData.forecast,
+                location: forecastData.location,
+
+                // Summary
+                summary: {
+                    bestDays: forecastData.summary.bestDays,
+                    idealDaysCount: forecastData.summary.idealDaysCount,
+                    rainyDaysCount: forecastData.summary.rainyDaysCount
+                }
             },
         });
 

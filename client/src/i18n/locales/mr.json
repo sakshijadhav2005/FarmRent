@@ -27,7 +27,8 @@
         "completed": "पूर्ण",
         "cancelled": "रद्द केले",
         "perHour": "/तास",
-        "perDay": "/दिवस"
+        "perDay": "/दिवस",
+        "processing": "प्रक्रिया सुरू..."
     },
     "nav": {
         "home": "मुख्यपृष्ठ",
@@ -101,13 +102,35 @@
         "farmer": "शेतकरी",
         "owner": "उपकरण मालक",
         "worker": "शेत मजूर",
+        "admin": "प्रशासक",
         "forgotPassword": "पासवर्ड विसरलात?",
         "noAccount": "खाते नाही?",
         "hasAccount": "आधीच खाते आहे?",
         "signUp": "साइन अप",
         "signIn": "साइन इन",
         "loginSuccess": "लॉगिन यशस्वी!",
-        "registerSuccess": "नोंदणी यशस्वी!"
+        "registerSuccess": "नोंदणी यशस्वी!",
+        "signInWithGoogle": "Google सह साइन इन करा",
+        "signUpWithGoogle": "Google सह साइन अप करा",
+        "orContinueWith": "किंवा सुरू ठेवा",
+        "selectRole": "तुमची भूमिका निवडा",
+        "completeProfile": "तुमचे प्रोफाइल पूर्ण करा"
+    },
+    "selectRole": {
+        "title": "तुमची भूमिका निवडा",
+        "subtitle": "FarmLink कसे वापरायचे ते निवडा",
+        "continue": "पुढे सुरू ठेवा",
+        "info": "तुम्ही नंतर तुमच्या प्रोफाइल सेटिंग्जमधून तुमची भूमिका बदलू शकता"
+    },
+    "roles": {
+        "farmer": "शेतकरी",
+        "farmerDesc": "तुमच्या शेती गरजांसाठी उपकरणे भाड्याने घ्या",
+        "owner": "उपकरण मालक",
+        "ownerDesc": "तुमची शेती उपकरणे सूचीबद्ध करा आणि भाड्याने द्या",
+        "worker": "शेत मजूर",
+        "workerDesc": "शेतात कामाच्या संधी शोधा",
+        "driver": "ड्रायव्हर",
+        "driverDesc": "उपकरणे आणि माल वाहतूक करा"
     },
     "dashboard": {
         "title": "डॅशबोर्ड आढावा",
@@ -243,6 +266,7 @@
         "saved": "सेटिंग्ज यशस्वीपणे सेव्ह झाल्या!"
     },
     "errors": {
+        "selectRole": "पुढे जाण्यासाठी कृपया एक भूमिका निवडा",
         "required": "हे फील्ड आवश्यक आहे",
         "invalidEmail": "कृपया वैध ईमेल प्रविष्ट करा",
         "passwordMismatch": "पासवर्ड जुळत नाहीत",
@@ -280,7 +304,25 @@
             "sowing": "पेरणी/रोपण",
             "ploughing": "नांगरणी/मशागत",
             "irrigation": "सिंचन (पाणी देणे)"
-        }
+        },
+        "conditions": "परिस्थिती",
+        "speakResult": "परिणाम बोला",
+        "stopSpeaking": "बोलणे थांबवा",
+        "selectLanguage": "भाषा निवडा",
+        "stepByStep": "टप्प्याटप्प्याने मार्गदर्शिका",
+        "optimalTiming": "सर्वोत्तम वेळ",
+        "equipmentTips": "उपकरण सूचना",
+        "localWisdom": "स्थानिक शेती ज्ञान",
+        "expectedOutcome": "अपेक्षित परिणाम",
+        "weatherImpact": "हवामान प्रभाव विश्लेषण",
+        "marketInsights": "बाजार माहिती",
+        "downloadReport": "अहवाल डाउनलोड करा",
+        "downloading": "डाउनलोड होत आहे...",
+        "pleaseWait": "कृपया प्रतीक्षा करा...",
+        "weeklyForecast": "७-दिवसांचे हवामान अंदाज",
+        "idealDays": "आदर्श दिवस",
+        "rainyDays": "पावसाचे दिवस",
+        "bestDays": "कामासाठी सर्वोत्तम दिवस"
     },
     "voiceAssistant": {
         "title": "व्हॉइस असिस्टंट",

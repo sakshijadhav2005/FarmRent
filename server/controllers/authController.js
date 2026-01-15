@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcryptjs");
+const passport = require('passport');
 
 // Generate Token
 const generateToken = (id, role) => {
@@ -190,5 +191,102 @@ exports.updateMe = async (req, res) => {
     } catch (err) {
         console.error('Update profile error:', err);
         return res.status(500).json({ success: false, message: 'Failed to update profile' });
+    }
+};
+
+// GOOGLE OAUTH - Initiate authentication
+exports.googleAuth = passport.authenticate('google', {
+    scope: ['profile', 'email']
+});
+
+// GOOGLE OAUTH - Callback handler
+exports.googleCallback = (req, res, next) => {
+    passport.authenticate('google', async (err, user, info) => {
+        try {
+            if (err) {
+                console.error('Google OAuth callback error:', err);
+                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+            }
+
+            if (!user) {
+                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=no_user`);
+            }
+
+            // Check if user needs role selection (new Google user)
+            if (user.needsRoleSelection) {
+                // Store user info in session for role selection
+                req.session.pendingGoogleUser = {
+                    email: user.email,
+                    name: user.name,
+                    googleId: user.googleId
+                };
+                // Redirect to role selection page
+                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/select-role?google=true`);
+            }
+
+            // Existing user - generate token and redirect
+            const token = generateToken(user._id, user.role);
+
+            // Redirect to frontend with token
+            res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/callback?token=${token}&role=${user.role}`);
+
+        } catch (error) {
+            console.error('Google callback processing error:', error);
+            res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=processing_failed`);
+        }
+    })(req, res, next);
+};
+
+// GOOGLE OAUTH - Complete profile with role selection
+exports.completeGoogleProfile = async (req, res) => {
+    try {
+        const { role } = req.body;
+
+        if (!role) {
+            return res.status(400).json({ success: false, message: 'Role is required' });
+        }
+
+        // Get pending user from session
+        const pendingUser = req.session.pendingGoogleUser;
+
+        if (!pendingUser) {
+            return res.status(400).json({ success: false, message: 'No pending Google registration found' });
+        }
+
+        // Create new user with selected role
+        const user = await User.create({
+            name: pendingUser.name,
+            email: pendingUser.email,
+            googleId: pendingUser.googleId,
+            authProvider: 'google',
+            role
+        });
+
+        // Clear pending user from session
+        delete req.session.pendingGoogleUser;
+
+        // Generate token
+        const token = generateToken(user._id, user.role);
+
+        return res.status(201).json({
+            success: true,
+            message: 'Profile completed successfully',
+            user: {
+                _id: user._id,
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                mobile: user.mobile,
+                role: user.role
+            },
+            token
+        });
+
+    } catch (err) {
+        console.error('Complete Google profile error:', err);
+        return res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to complete profile'
+        });
     }
 };

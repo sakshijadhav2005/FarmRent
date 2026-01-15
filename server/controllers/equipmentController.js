@@ -48,10 +48,10 @@ exports.createEquipment = async (req, res) => {
             };
         }
 
-        // If a file was uploaded, add its URL (S3/R2) or local path to the request body
+        // If a file was uploaded, add its URL (Cloudinary/S3/R2) or local path to the request body
         if (req.file) {
-            // multer-s3 provides 'location' for usage in database (full URL)
-            req.body.image = req.file.location || `/uploads/${req.file.filename}`;
+            // cloudinary uses 'path', multer-s3 provides 'location'
+            req.body.image = req.file.path || req.file.location || `/uploads/${req.file.filename}`;
         }
 
         const equipment = await Equipment.create(req.body);

@@ -22,6 +22,8 @@ import DriverDashboard from './pages/DriverDashboard';
 import WorkerDetails from './pages/WorkerDetails';
 import WorkPlanner from './pages/WorkPlanner';
 import VoiceAssistant from './pages/VoiceAssistant';
+import AuthCallback from './pages/AuthCallback';
+import SelectRole from './pages/SelectRole';
 import { AuthProvider } from './context/AuthContext';
 
 // Initialize Stripe (use test key for development)
@@ -38,6 +40,8 @@ function App() {
                             <Route index element={<Home />} />
                             <Route path="login" element={<Login />} />
                             <Route path="register" element={<Register />} />
+                            <Route path="auth/callback" element={<AuthCallback />} />
+                            <Route path="select-role" element={<SelectRole />} />
                             <Route path="dashboard" element={<DashboardRouter />} />
                             <Route path="dashboard/owner" element={<OwnerDashboard />} />
                             <Route path="dashboard/farmer" element={<FarmerDashboard />} />

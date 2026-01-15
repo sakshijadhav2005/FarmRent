@@ -191,6 +191,40 @@ exports.deleteSession = async (req, res) => {
     }
 };
 
+// @desc    Analyze crop image using Gemini Vision
+// @route   POST /api/chat/analyze-image
+// @access  Private
+exports.analyzeCropImage = async (req, res) => {
+    try {
+        const { base64Image, mimeType, message } = req.body;
+
+        if (!base64Image) {
+            return res.status(400).json({
+                success: false,
+                message: 'Image data is required'
+            });
+        }
+
+        // Call AI service for vision analysis
+        const aiResponse = await aiService.analyzeImage(base64Image, mimeType || 'image/jpeg', message);
+
+        // We could also save this to a chat session if needed
+        // For now, just return the response
+        res.json({
+            success: true,
+            data: {
+                response: aiResponse
+            }
+        });
+    } catch (error) {
+        console.error('Image analysis error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to analyze image'
+        });
+    }
+};
+
 // @desc    Get quick suggestions
 // @route   GET /api/chat/suggestions
 // @access  Public
@@ -209,3 +243,4 @@ exports.getSuggestions = async (req, res) => {
         data: suggestions
     });
 };
+

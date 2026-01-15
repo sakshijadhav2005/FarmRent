@@ -1,17 +1,46 @@
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const { S3Client } = require('@aws-sdk/client-s3');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Check if R2 functionality is enabled via env vars
+// Check which storage to use based on env vars
+const useCloudinary = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
 const useR2 = process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_ENDPOINT && process.env.R2_BUCKET_NAME;
 
 let uploadMiddleware;
 
-if (useR2) {
+if (useCloudinary) {
+    console.log('Using Cloudinary for Image Storage (Free & Optimized)');
+
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+
+    const storage = new CloudinaryStorage({
+        cloudinary: cloudinary,
+        params: {
+            folder: 'farmlink_equipment',
+            allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+            transformation: [{ width: 1200, height: 1200, crop: 'limit' }] // Auto-optimize size
+        }
+    });
+
+    uploadMiddleware = multer({
+        storage: storage,
+        limits: { fileSize: 10 * 1024 * 1024 }, // Cloudinary is generous, 10MB limit
+        fileFilter: function (req, file, cb) {
+            checkFileType(file, cb);
+        }
+    });
+
+} else if (useR2) {
     console.log('Using Cloudflare R2 for Image Storage');
 
     const s3 = new S3Client({
@@ -27,7 +56,6 @@ if (useR2) {
         storage: multerS3({
             s3: s3,
             bucket: process.env.R2_BUCKET_NAME,
-            acl: 'public-read', // R2 usually ignores this or handles it via bucket policy
             contentType: multerS3.AUTO_CONTENT_TYPE,
             metadata: function (req, file, cb) {
                 cb(null, { fieldName: file.fieldname });
@@ -37,17 +65,16 @@ if (useR2) {
                 cb(null, 'equipment/' + file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
             }
         }),
-        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+        limits: { fileSize: 5 * 1024 * 1024 },
         fileFilter: function (req, file, cb) {
             checkFileType(file, cb);
         }
     });
 
 } else {
-    // Fallback to local storage if R2 is not configured
-    console.log('Using Local Storage for Images (R2 not configured)');
+    // Fallback to local storage
+    console.log('Using Local Storage for Images (Cloudinary/R2 not configured)');
 
-    // Set storage engine
     const storage = multer.diskStorage({
         destination: './uploads/',
         filename: function (req, file, cb) {
@@ -66,11 +93,8 @@ if (useR2) {
 
 // Check File Type
 function checkFileType(file, cb) {
-    // Allowed ext
     const filetypes = /jpeg|jpg|png|webp/;
-    // Check ext
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    // Check mime
     const mimetype = filetypes.test(file.mimetype);
 
     if (mimetype && extname) {
@@ -81,3 +105,4 @@ function checkFileType(file, cb) {
 }
 
 module.exports = uploadMiddleware;
+

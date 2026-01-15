@@ -1,53 +1,77 @@
 const axios = require('axios');
 
 // AI Provider Configuration
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_KEY = 'AIzaSyCs3tXLYyCv5eJrlZ7jZW9j7MIm0WOc8C4';
+console.log('Loaded GEMINI_API_KEY:', GEMINI_API_KEY ? `${GEMINI_API_KEY.substring(0, 10)}...` : 'NOT SET');
+// Using v1beta for reliable free tier access
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // System prompt for the AI Crop Assistant
-const SYSTEM_PROMPT = `You are FarmRent AI Assistant - an expert agricultural advisor helping Indian farmers with:
+const SYSTEM_PROMPT = `You are FarmRent AI Assistant - an expert agricultural advisor helping Indian farmers with detailed, comprehensive advice:
 
-1. **Equipment Recommendations**: Suggest appropriate farming equipment based on:
-   - Crop type (rice, wheat, sugarcane, cotton, vegetables, etc.)
-   - Farm size and terrain
-   - Season and weather conditions
-   - Budget constraints
+1. **Equipment Recommendations**: Provide detailed suggestions with:
+   - Specific equipment models and specifications
+   - Price ranges in Indian Rupees (₹)
+   - Suitable farm sizes and terrain types
+   - Seasonal considerations and weather impact
+   - Maintenance tips and operational guidance
+   - Local dealer information when relevant
 
-2. **Farming Knowledge**: Provide guidance on:
-   - Best practices for various crops
-   - Seasonal farming calendar
-   - Soil preparation techniques
-   - Irrigation methods
-   - Pest and disease management
+2. **Comprehensive Farming Knowledge**: Give detailed guidance on:
+   - Step-by-step best practices for various crops
+   - Complete seasonal farming calendar with timing
+   - Detailed soil preparation techniques with equipment needed
+   - Comprehensive irrigation methods and water management
+   - In-depth pest and disease management with treatment options
+   - Fertilizer recommendations with application schedules
+   - Market trends and crop pricing insights
 
-3. **Weather-Based Advice**: Help farmers understand:
-   - Best times for specific activities
-   - Weather impact on operations
-   - Rain forecasts and planning
+3. **Weather-Based Detailed Advice**: Provide thorough analysis of:
+   - Optimal timing for specific farming activities
+   - Detailed weather impact on different operations
+   - Rain forecasts with actionable farming plans
+   - Seasonal planning with month-by-month guidance
+   - Risk mitigation strategies for weather challenges
 
-4. **Equipment Operation**: Explain:
-   - How to use different equipment
-   - Maintenance tips
-   - Safety guidelines
+4. **Equipment Operation & Maintenance**: Explain comprehensively:
+   - Detailed operation procedures for different equipment
+   - Complete maintenance schedules and checklists
+   - Safety guidelines with precautions
+   - Troubleshooting common issues
+   - Cost-benefit analysis for equipment purchases
 
 **Response Guidelines:**
-- Keep responses concise and practical
-- Use simple language (farmer-friendly)
-- Include specific equipment recommendations when relevant
-- Mention weather considerations when applicable
-- Use emojis to make responses engaging (🌾 🚜 ☀️ 🌧️)
-- If asked about booking, guide them to use the FarmRent platform
-- Prices are in Indian Rupees (₹)
-- Focus on crops common in India
+- Provide DETAILED, COMPREHENSIVE responses (minimum 150-200 words)
+- Include specific examples, numbers, and actionable steps
+- Use simple but thorough language (farmer-friendly but complete)
+- Include multiple equipment recommendations when relevant
+- Mention weather considerations and seasonal timing
+- Provide step-by-step instructions when applicable
+- Include cost estimates in Indian Rupees (₹)
+- Add safety tips and best practices
+- Use emojis to make responses engaging (🌾 🚜 ☀️ 🌧️ 💰 ⚠️)
+- If asked about booking, provide detailed guidance on using FarmRent platform
+- Focus on crops common in India with regional variations
+- Include both traditional and modern farming techniques
 
 **Equipment Types Available on FarmRent:**
-- Tractors (various HP)
-- Harvesters (combine, rice, wheat)
-- Tillers and Cultivators
-- Drones (for spraying/monitoring)
-- Seeders and Planters
-- Irrigation Equipment
-- Sprayers`;
+- Tractors (various HP: 25HP-75HP, ₹15,000-50,000/month)
+- Harvesters (combine, rice, wheat: ₹2,000-5,000/day)
+- Tillers and Cultivators (₹500-1,500/day)
+- Drones (for spraying/monitoring: ₹1,000-3,000/day)
+- Seeders and Planters (₹800-2,000/day)
+- Irrigation Equipment (₹300-1,000/day)
+- Sprayers (₹200-800/day)`;
+
+const VISION_PROMPT = `You are the "FarmRent Crop Doctor". Analyze the provided image of a crop, plant, or field and provide:
+1. **Identification**: Identify the crop and its current growth stage.
+2. **Health Assessment**: Detect any visible diseases, pests, or nutrient deficiencies.
+3. **Actionable Advice**: Suggest specific treatments, pesticides, or organic remedies.
+4. **Prevention**: How to prevent this issue in the future.
+5. **Equipment**: Suggest any equipment from FarmRent (sprayers, drones, etc.) that could help.
+
+Keep the advice practical for Indian farmers. Use emojis. If you can't see a plant, politely ask for a clearer photo of the crop.`;
 
 // Fallback responses when AI is unavailable
 const fallbackResponses = {
@@ -94,77 +118,137 @@ const fallbackResponses = {
         "This helps me give better recommendations! 🌾"
 };
 
-// Generate response using Gemini AI
+/**
+ * Generate text-based AI response
+ */
 const generateAIResponse = async (userMessage, context = {}) => {
-    // If no API key, use fallback
-    if (!GEMINI_API_KEY) {
-        return generateFallbackResponse(userMessage);
-    }
+    if (!GEMINI_API_KEY) return generateFallbackResponse(userMessage);
 
-    try {
-        let contextInfo = context.weather
-            ? `\n\nCurrent context:\n- Location: ${context.location || 'India'}\n- Weather: ${JSON.stringify(context.weather)}`
-            : '';
+    const tryModels = [GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    let lastError = null;
 
-        if (context.equipment) {
-            contextInfo += `\n\n**Available Equipment in Database:**\n${context.equipment}\n(Recommend these specific items if relevant to the user request. Use the format [Equipment Name](ID) or just mention them details)`;
-        }
+    for (const model of tryModels) {
+        try {
+            // Try v1 first, fall back to v1beta if needed
+            const apiVersion = model.includes('latest') ? 'v1beta' : 'v1beta';
+            const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent`;
 
-        const response = await axios.post(
-            `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-            {
-                contents: [{
-                    parts: [{
-                        text: `${SYSTEM_PROMPT}${contextInfo}\n\nUser: ${userMessage}\n\nAssistant:`
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 500,
-                    topP: 0.8
-                }
-            },
-            {
-                headers: { 'Content-Type': 'application/json' },
-                timeout: 15000
+            let contextInfo = context.weather
+                ? `\n\nCurrent context:\n- Location: ${context.location || 'India'}\n- Weather: ${JSON.stringify(context.weather)}`
+                : '';
+
+            if (context.equipment) {
+                contextInfo += `\n\n**Available Equipment in Database:**\n${context.equipment}`;
             }
-        );
 
-        if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            return response.data.candidates[0].content.parts[0].text;
+            const response = await axios.post(
+                url,
+                {
+                    contents: [{
+                        parts: [{
+                            text: `${SYSTEM_PROMPT}${contextInfo}\n\nUser: ${userMessage}\n\nAssistant:`
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 2000, // Increased for longer responses
+                        topP: 0.8
+                    }
+                },
+                { 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': GEMINI_API_KEY
+                    }, 
+                    timeout: 20000 
+                }
+            );
+
+            return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || generateFallbackResponse(userMessage);
+        } catch (error) {
+            lastError = error;
+            // Only retry if it's a 404 (model not found)
+            if (error.response?.status !== 404) break;
+            console.warn(`Model ${model} not found, trying next...`);
         }
-
-        return generateFallbackResponse(userMessage);
-    } catch (error) {
-        console.error('AI Service Error:', error.message);
-        return generateFallbackResponse(userMessage);
     }
+
+    console.error('AI Service Error:', lastError.response?.data || lastError.message);
+    return generateFallbackResponse(userMessage);
 };
 
-// Generate fallback response based on keywords
+/**
+ * Analyze image using Gemini Vision
+ */
+const analyzeImage = async (base64Image, mimeType = 'image/jpeg', userPrompt = '') => {
+    if (!GEMINI_API_KEY) return "AI Vision service is temporarily unavailable. Please check your API key.";
+
+    const tryModels = [GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    let lastError = null;
+
+    for (const model of tryModels) {
+        try {
+            // Try v1 for stable models, v1beta for -latest versions
+            const apiVersion = model.includes('latest') ? 'v1beta' : 'v1beta';
+            const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent`;
+            
+            console.log(`Trying vision model: ${model}, URL: ${url}`);
+            console.log(`API Key (first 10 chars): ${GEMINI_API_KEY.substring(0, 10)}...`);
+
+            const response = await axios.post(
+                url,
+                {
+                    contents: [{
+                        parts: [
+                            { text: userPrompt ? `${VISION_PROMPT}\n\nUser Question: ${userPrompt}` : VISION_PROMPT },
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: base64Image
+                                }
+                            }
+                        ]
+                    }],
+                    generationConfig: {
+                        temperature: 0.4,
+                        maxOutputTokens: 1000,
+                        topP: 0.8
+                    }
+                },
+                { 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': GEMINI_API_KEY
+                    }, 
+                    timeout: 30000 
+                }
+            );
+
+            return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't analyze the image. Please try a clearer photo.";
+        } catch (error) {
+            lastError = error;
+            console.error(`Vision Model ${model} error:`, error.response?.data || error.message);
+            // Only retry if it's a 404 (model not found)
+            if (error.response?.status !== 404) break;
+            console.warn(`Vision Model ${model} not found, trying next...`);
+        }
+    }
+
+    console.error('Gemini Vision Error:', lastError.response?.data || lastError.message);
+    return "Sorry, I had trouble analyzing the image. The AI model might be temporarily unavailable or your API key settings might need checking.";
+};
+
+
 const generateFallbackResponse = (message) => {
     const lowerMessage = message.toLowerCase();
-
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('namaste')) {
-        return fallbackResponses.greeting;
-    }
-    if (lowerMessage.includes('rice') || lowerMessage.includes('paddy') || lowerMessage.includes('धान')) {
-        return fallbackResponses.rice;
-    }
-    if (lowerMessage.includes('wheat') || lowerMessage.includes('गेहूं')) {
-        return fallbackResponses.wheat;
-    }
-    if (lowerMessage.includes('weather') || lowerMessage.includes('rain') || lowerMessage.includes('मौसम')) {
-        return fallbackResponses.weather;
-    }
-    if (lowerMessage.includes('equipment') || lowerMessage.includes('tractor') || lowerMessage.includes('harvester')) {
-        return fallbackResponses.equipment;
-    }
-
+    if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('namaste')) return fallbackResponses.greeting;
+    if (lowerMessage.includes('rice') || lowerMessage.includes('paddy')) return fallbackResponses.rice;
+    if (lowerMessage.includes('wheat')) return fallbackResponses.wheat;
+    if (lowerMessage.includes('weather') || lowerMessage.includes('rain')) return fallbackResponses.weather;
+    if (lowerMessage.includes('equipment') || lowerMessage.includes('tractor')) return fallbackResponses.equipment;
     return fallbackResponses.default;
 };
 
-// Get equipment recommendations for crop
 const getEquipmentForCrop = (crop) => {
     const recommendations = {
         rice: ['Puddler', 'Rice Transplanter', 'Paddy Harvester', 'Leveler'],
@@ -174,13 +258,14 @@ const getEquipmentForCrop = (crop) => {
         vegetables: ['Mini Tiller', 'Sprayer', 'Mulch Layer'],
         default: ['Tractor', 'Cultivator', 'Sprayer', 'Trailer']
     };
-
     return recommendations[crop.toLowerCase()] || recommendations.default;
 };
 
 module.exports = {
     generateAIResponse,
+    analyzeImage,
     generateFallbackResponse,
     getEquipmentForCrop,
     SYSTEM_PROMPT
 };
+
