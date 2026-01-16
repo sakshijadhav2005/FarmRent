@@ -33,7 +33,7 @@ const allowedOrigins = [
     'http://localhost:5173',           // Local development
     'http://localhost:5174',           // Alternative local port
     'http://localhost:3000',           // Alternative local
-    process.env.FRONTEND_URL,          // Production frontend URL from env
+    process.env.CLIENT_URL,          // Production frontend URL from env
 ].filter(Boolean); // Remove undefined values
 
 app.use(cors({
