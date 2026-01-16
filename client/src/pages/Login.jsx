@@ -53,8 +53,10 @@ const Login = () => {
     };
 
     const handleGoogleLogin = () => {
-        // Redirect to backend Google OAuth initiation endpoint (NOT the callback URL)
-        window.location.href = 'https://farm-rent.onrender.com/api/auth/google';
+        // Redirect to backend Google OAuth endpoint
+        // Uses VITE_API_BASE_URL for production, falls back to localhost for development
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+        window.location.href = `${apiBase}/auth/google`;
     };
 
     return (

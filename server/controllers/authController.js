@@ -214,14 +214,22 @@ exports.googleCallback = (req, res, next) => {
 
             // Check if user needs role selection (new Google user)
             if (user.needsRoleSelection) {
-                // Store user info in session for role selection
-                req.session.pendingGoogleUser = {
+                // Instead of using session (which has cross-origin cookie issues),
+                // pass user data via URL parameters (URL-safe base64 encoded)
+                const jsonData = JSON.stringify({
                     email: user.email,
                     name: user.name,
                     googleId: user.googleId
-                };
-                // Redirect to role selection page
-                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/select-role?google=true`);
+                });
+                // Use URL-safe base64 encoding (replace + with -, / with _, remove = padding)
+                const pendingUserData = Buffer.from(jsonData)
+                    .toString('base64')
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')
+                    .replace(/=/g, '');
+
+                // Redirect to role selection page with encoded user data
+                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/select-role?google=true&data=${encodeURIComponent(pendingUserData)}`);
             }
 
             // Existing user - generate token and redirect
@@ -240,17 +248,59 @@ exports.googleCallback = (req, res, next) => {
 // GOOGLE OAUTH - Complete profile with role selection
 exports.completeGoogleProfile = async (req, res) => {
     try {
-        const { role } = req.body;
+        const { role, userData } = req.body;
 
         if (!role) {
             return res.status(400).json({ success: false, message: 'Role is required' });
         }
 
-        // Get pending user from session
-        const pendingUser = req.session.pendingGoogleUser;
+        if (!userData) {
+            return res.status(400).json({ success: false, message: 'User data is required' });
+        }
 
-        if (!pendingUser) {
-            return res.status(400).json({ success: false, message: 'No pending Google registration found' });
+        // Decode the user data from URL-safe base64
+        let pendingUser;
+        try {
+            // Convert URL-safe base64 back to standard base64
+            let base64Data = userData
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+            // Add padding if necessary
+            const padding = base64Data.length % 4;
+            if (padding) {
+                base64Data += '='.repeat(4 - padding);
+            }
+            pendingUser = JSON.parse(Buffer.from(base64Data, 'base64').toString('utf8'));
+        } catch (e) {
+            console.error('Failed to decode user data:', e.message);
+            return res.status(400).json({ success: false, message: 'Invalid user data format' });
+        }
+
+        if (!pendingUser.email || !pendingUser.googleId) {
+            return res.status(400).json({ success: false, message: 'Invalid user data' });
+        }
+
+        // Check if user already exists (in case of duplicate registration attempt)
+        const existingUser = await User.findOne({
+            $or: [{ googleId: pendingUser.googleId }, { email: pendingUser.email }]
+        });
+
+        if (existingUser) {
+            // User already exists, just log them in
+            const token = generateToken(existingUser._id, existingUser.role);
+            return res.status(200).json({
+                success: true,
+                message: 'User already registered',
+                user: {
+                    _id: existingUser._id,
+                    id: existingUser._id,
+                    name: existingUser.name,
+                    email: existingUser.email,
+                    mobile: existingUser.mobile,
+                    role: existingUser.role
+                },
+                token
+            });
         }
 
         // Create new user with selected role
@@ -261,9 +311,6 @@ exports.completeGoogleProfile = async (req, res) => {
             authProvider: 'google',
             role
         });
-
-        // Clear pending user from session
-        delete req.session.pendingGoogleUser;
 
         // Generate token
         const token = generateToken(user._id, user.role);

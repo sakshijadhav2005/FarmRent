@@ -15,13 +15,30 @@ const SelectRole = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const isGoogleAuth = searchParams.get('google') === 'true';
+    const googleUserData = searchParams.get('data'); // Base64 encoded user data
 
     useEffect(() => {
         // If not coming from Google OAuth, redirect to register
         if (!isGoogleAuth) {
             navigate('/register');
+            return;
         }
-    }, [isGoogleAuth, navigate]);
+
+        // Debug logging
+        console.log('SelectRole: isGoogleAuth =', isGoogleAuth);
+        console.log('SelectRole: googleUserData from URL =', googleUserData);
+        console.log('SelectRole: Current URL =', window.location.href);
+
+        // Store the data in case page is refreshed
+        if (googleUserData) {
+            localStorage.setItem('pendingGoogleUser', googleUserData);
+            console.log('SelectRole: Stored data to localStorage');
+        } else {
+            console.log('SelectRole: No googleUserData in URL, checking localStorage...');
+            const storedData = localStorage.getItem('pendingGoogleUser');
+            console.log('SelectRole: localStorage data =', storedData);
+        }
+    }, [isGoogleAuth, navigate, googleUserData]);
 
     const roles = [
         {
@@ -64,6 +81,14 @@ const SelectRole = () => {
             return;
         }
 
+        // Get user data from URL params or localStorage (backup)
+        const userData = googleUserData || localStorage.getItem('pendingGoogleUser');
+
+        if (!userData) {
+            setError('Google authentication data not found. Please try signing in again.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
@@ -73,8 +98,7 @@ const SelectRole = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include', // Important for session cookies
-                body: JSON.stringify({ role: selectedRole })
+                body: JSON.stringify({ role: selectedRole, userData })
             });
 
             const data = await response.json();
@@ -82,6 +106,9 @@ const SelectRole = () => {
             if (!data.success) {
                 throw new Error(data.message || 'Failed to complete registration');
             }
+
+            // Clear the stored data
+            localStorage.removeItem('pendingGoogleUser');
 
             // Login the user
             login(data.user, data.token);
