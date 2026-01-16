@@ -55,7 +55,7 @@ const Login = () => {
     const handleGoogleLogin = () => {
         // Redirect to backend Google OAuth endpoint
         // Uses VITE_API_BASE_URL for production, falls back to localhost for development
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+        const apiBase = import.meta.env.VITE_API_BASE_URL ;
         window.location.href = `${apiBase}/auth/google`;
     };
 
