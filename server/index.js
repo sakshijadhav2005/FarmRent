@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware - CORS Configuration for Render deployment
 const allowedOrigins = [
-    process.env.CLIENT_URL      // Production frontend URL from env
+    process.env.CLIENT_URL,   // Production frontend URL from env
 ].filter(Boolean); // Remove undefined values
 
 app.use(cors({
