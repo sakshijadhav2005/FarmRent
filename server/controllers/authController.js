@@ -2,6 +2,8 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcryptjs");
 const passport = require('passport');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Generate Token
 const generateToken = (id, role) => {
@@ -205,11 +207,11 @@ exports.googleCallback = (req, res, next) => {
         try {
             if (err) {
                 console.error('Google OAuth callback error:', err);
-                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+                return res.redirect(`${process.env.CLIENT_URL }/login?error=auth_failed`);
             }
 
             if (!user) {
-                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=no_user`);
+                return res.redirect(`${process.env.CLIENT_URL }/login?error=no_user`);
             }
 
             // Check if user needs role selection (new Google user)
@@ -229,18 +231,18 @@ exports.googleCallback = (req, res, next) => {
                     .replace(/=/g, '');
 
                 // Redirect to role selection page with encoded user data
-                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/select-role?google=true&data=${encodeURIComponent(pendingUserData)}`);
+                return res.redirect(`${process.env.CLIENT_URL}/select-role?google=true&data=${encodeURIComponent(pendingUserData)}`);
             }
 
             // Existing user - generate token and redirect
             const token = generateToken(user._id, user.role);
 
             // Redirect to frontend with token
-            res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/callback?token=${token}&role=${user.role}`);
+            res.redirect(`${process.env.CLIENT_URL  }/auth/callback?token=${token}&role=${user.role}`);
 
         } catch (error) {
             console.error('Google callback processing error:', error);
-            res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=processing_failed`);
+            res.redirect(`${process.env.CLIENT_URL }/login?error=processing_failed`);
         }
     })(req, res, next);
 };
