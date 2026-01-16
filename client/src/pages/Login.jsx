@@ -54,7 +54,7 @@ const Login = () => {
 
     const handleGoogleLogin = () => {
         // Redirect to backend Google OAuth endpoint
-        window.location.href = 'http://localhost:5001/api/auth/google';
+        window.location.href = 'https://farm-rent.onrender.com/api/auth/google/callback';
     };
 
     return (
