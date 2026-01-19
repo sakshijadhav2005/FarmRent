@@ -713,33 +713,91 @@ REMEMBER: Indian farmers need PRACTICAL, ACTIONABLE advice with SPECIFIC details
                 };
             }
 
-            // If JSON parsing fails, return structured fallback
+            // If JSON parsing fails, return structured fallback with language support
+            const langKey = this.getLangKey(language);
+            const fallbackStrings = {
+                en: {
+                    warnings: ["Check local weather conditions before starting", "Ensure equipment is properly maintained"],
+                    optimalTiming: { bestHours: "6:00 AM - 10:00 AM", reason: "Optimal conditions for outdoor work", avoidHours: "Peak afternoon heat" },
+                    marketInsights: [`Research current prices in ${location} mandi before selling`],
+                    localWisdom: `Farmers in ${location} typically perform ${activity} during cooler morning hours for best results.`,
+                    weatherImpact: { currentConditions: "Variable conditions expected", preparation: "Prepare for weather changes", contingency: "Have backup plan ready" },
+                    expectedOutcome: "Following standard practices should yield good results."
+                },
+                hi: {
+                    warnings: ["शुरू करने से पहले स्थानीय मौसम की स्थिति जांचें", "सुनिश्चित करें कि उपकरण ठीक से बनाए रखा गया है"],
+                    optimalTiming: { bestHours: "सुबह 6:00 - 10:00 बजे", reason: "बाहरी काम के लिए अनुकूल परिस्थितियां", avoidHours: "दोपहर की तेज गर्मी" },
+                    marketInsights: [`बेचने से पहले ${location} मंडी में वर्तमान कीमतों की जांच करें`],
+                    localWisdom: `${location} के किसान आमतौर पर बेहतर परिणामों के लिए सुबह के ठंडे समय में ${activity} करते हैं।`,
+                    weatherImpact: { currentConditions: "परिवर्तनशील स्थितियां अपेक्षित", preparation: "मौसम परिवर्तन के लिए तैयार रहें", contingency: "बैकअप योजना तैयार रखें" },
+                    expectedOutcome: "मानक प्रथाओं का पालन करने से अच्छे परिणाम मिलने चाहिए।"
+                },
+                mr: {
+                    warnings: ["सुरू करण्यापूर्वी स्थानिक हवामान परिस्थिती तपासा", "उपकरणे व्यवस्थित ठेवल्याची खात्री करा"],
+                    optimalTiming: { bestHours: "सकाळी 6:00 - 10:00 वाजता", reason: "बाहेरच्या कामासाठी अनुकूल परिस्थिती", avoidHours: "दुपारची तीव्र उष्णता" },
+                    marketInsights: [`विकण्यापूर्वी ${location} मार्केटमधील सध्याच्या किंमती तपासा`],
+                    localWisdom: `${location} मधील शेतकरी चांगल्या परिणामांसाठी सहसा सकाळच्या थंड वेळी ${activity} करतात.`,
+                    weatherImpact: { currentConditions: "बदलत्या परिस्थिती अपेक्षित", preparation: "हवामान बदलासाठी तयार रहा", contingency: "बॅकअप योजना तयार ठेवा" },
+                    expectedOutcome: "मानक पद्धतींचे पालन केल्यास चांगले परिणाम मिळतील."
+                }
+            };
+            const strings = fallbackStrings[langKey];
+
             return {
-                recommendation: this.getDefaultRecommendation(activity, equipmentType, location),
-                stepByStepGuide: this.getDefaultSteps(activity, equipmentType),
-                warnings: ["Check local weather conditions before starting", "Ensure equipment is properly maintained"],
-                suggestions: this.getDefaultSuggestions(equipmentType),
-                optimalTiming: { bestHours: "6:00 AM - 10:00 AM", reason: "Optimal conditions for outdoor work", avoidHours: "Peak afternoon heat" },
+                recommendation: this.getDefaultRecommendation(activity, equipmentType, location, language),
+                stepByStepGuide: this.getDefaultSteps(activity, equipmentType, language),
+                warnings: strings.warnings,
+                suggestions: this.getDefaultSuggestions(equipmentType, language),
+                optimalTiming: strings.optimalTiming,
                 equipmentTips: this.getDefaultEquipmentTips(equipmentType),
-                marketInsights: [`Research current prices in ${location} mandi before selling`],
-                localWisdom: `Farmers in ${location} typically perform ${activity} during cooler morning hours for best results.`,
-                weatherImpact: { currentConditions: "Variable conditions expected", preparation: "Prepare for weather changes", contingency: "Have backup plan ready" },
-                expectedOutcome: "Following standard practices should yield good results.",
+                marketInsights: strings.marketInsights,
+                localWisdom: strings.localWisdom,
+                weatherImpact: strings.weatherImpact,
+                expectedOutcome: strings.expectedOutcome,
                 confidence: "medium"
             };
         } catch (error) {
             console.error('AI synthesis failed:', error.message);
+            const langKey = this.getLangKey(language);
+            const errorStrings = {
+                en: {
+                    recommendation: `Based on current analysis, ${activity} operations with ${equipmentType} in ${location} appear feasible. Monitor weather conditions closely.`,
+                    warnings: ["Unable to fetch real-time data - please verify conditions locally"],
+                    optimalTiming: { bestHours: "Early morning (6-10 AM)", reason: "Generally best conditions", avoidHours: "Midday heat" },
+                    localWisdom: "Consult with local farmers for region-specific advice.",
+                    weatherImpact: { currentConditions: "Check local weather", preparation: "Standard preparation recommended", contingency: "Be flexible with timing" },
+                    expectedOutcome: "Results depend on following best practices and local conditions."
+                },
+                hi: {
+                    recommendation: `वर्तमान विश्लेषण के आधार पर, ${location} में ${equipmentType} के साथ ${activity} संभव प्रतीत होता है। मौसम की स्थिति पर नजर रखें।`,
+                    warnings: ["रीयल-टाइम डेटा प्राप्त करने में असमर्थ - कृपया स्थानीय रूप से स्थितियों की पुष्टि करें"],
+                    optimalTiming: { bestHours: "सुबह जल्दी (6-10 बजे)", reason: "आम तौर पर सबसे अच्छी स्थितियां", avoidHours: "दोपहर की गर्मी" },
+                    localWisdom: "क्षेत्र-विशिष्ट सलाह के लिए स्थानीय किसानों से परामर्श करें।",
+                    weatherImpact: { currentConditions: "स्थानीय मौसम जांचें", preparation: "मानक तैयारी अनुशंसित", contingency: "समय के साथ लचीला बनें" },
+                    expectedOutcome: "परिणाम सर्वोत्तम प्रथाओं और स्थानीय परिस्थितियों पर निर्भर करते हैं।"
+                },
+                mr: {
+                    recommendation: `सध्याच्या विश्लेषणावर आधारित, ${location} मध्ये ${equipmentType} सह ${activity} शक्य दिसते. हवामान परिस्थितीवर लक्ष ठेवा.`,
+                    warnings: ["रिअल-टाइम डेटा मिळवता आला नाही - कृपया स्थानिक परिस्थिती तपासा"],
+                    optimalTiming: { bestHours: "सकाळी लवकर (6-10 वाजता)", reason: "सामान्यतः सर्वोत्तम परिस्थिती", avoidHours: "दुपारची उष्णता" },
+                    localWisdom: "प्रदेश-विशिष्ट सल्ल्यासाठी स्थानिक शेतकऱ्यांशी संपर्क साधा.",
+                    weatherImpact: { currentConditions: "स्थानिक हवामान तपासा", preparation: "मानक तयारी शिफारसीय", contingency: "वेळेत लवचिक रहा" },
+                    expectedOutcome: "परिणाम सर्वोत्तम पद्धती आणि स्थानिक परिस्थितींवर अवलंबून असतात."
+                }
+            };
+            const strings = errorStrings[langKey];
+
             return {
-                recommendation: `Based on current analysis, ${activity} operations with ${equipmentType} in ${location} appear feasible. Monitor weather conditions closely and plan accordingly for optimal results.`,
-                stepByStepGuide: this.getDefaultSteps(activity, equipmentType),
-                warnings: ["Unable to fetch real-time data - please verify conditions locally"],
-                suggestions: this.getDefaultSuggestions(equipmentType),
-                optimalTiming: { bestHours: "Early morning (6-10 AM)", reason: "Generally best conditions", avoidHours: "Midday heat" },
+                recommendation: strings.recommendation,
+                stepByStepGuide: this.getDefaultSteps(activity, equipmentType, language),
+                warnings: strings.warnings,
+                suggestions: this.getDefaultSuggestions(equipmentType, language),
+                optimalTiming: strings.optimalTiming,
                 equipmentTips: this.getDefaultEquipmentTips(equipmentType),
                 marketInsights: [],
-                localWisdom: "Consult with local farmers for region-specific advice.",
-                weatherImpact: { currentConditions: "Check local weather", preparation: "Standard preparation recommended", contingency: "Be flexible with timing" },
-                expectedOutcome: "Results depend on following best practices and local conditions.",
+                localWisdom: strings.localWisdom,
+                weatherImpact: strings.weatherImpact,
+                expectedOutcome: strings.expectedOutcome,
                 confidence: "low"
             };
         }
@@ -756,36 +814,87 @@ REMEMBER: Indian farmers need PRACTICAL, ACTIONABLE advice with SPECIFIC details
     }
 
     /**
-     * Default recommendation when AI fails
+     * Get language key from language code
      */
-    getDefaultRecommendation(activity, equipmentType, location) {
-        return `${activity} operations with ${equipmentType} in ${location} can proceed under current conditions. Ensure you check local weather forecasts for the most accurate timing. Early morning operations are generally recommended for better results and reduced equipment stress. Monitor soil moisture levels and adjust your approach based on field conditions.`;
+    getLangKey(language) {
+        if (language?.startsWith('mr')) return 'mr';
+        if (language?.startsWith('hi')) return 'hi';
+        return 'en';
     }
 
     /**
-     * Default step-by-step guide
+     * Default recommendation when AI fails - Multilingual
      */
-    getDefaultSteps(activity, equipmentType) {
-        return [
-            `Step 1: Check weather conditions and ensure ${equipmentType} is fueled and maintained`,
-            `Step 2: Start ${activity} from the most accessible area of your field around 6-7 AM`,
-            `Step 3: Take a break during peak heat hours (12-2 PM) to rest and refuel equipment`,
-            `Step 4: Resume operations in the afternoon (3-6 PM) and complete remaining areas`,
-            `Step 5: Clean and store ${equipmentType} properly after use to extend equipment life`
-        ];
+    getDefaultRecommendation(activity, equipmentType, location, language = 'en') {
+        const langKey = this.getLangKey(language);
+        const recommendations = {
+            en: `${activity} operations with ${equipmentType} in ${location} can proceed under current conditions. Ensure you check local weather forecasts for the most accurate timing. Early morning operations are generally recommended for better results and reduced equipment stress. Monitor soil moisture levels and adjust your approach based on field conditions.`,
+            hi: `${location} में ${equipmentType} के साथ ${activity} का काम मौजूदा परिस्थितियों में किया जा सकता है। सबसे सटीक समय के लिए स्थानीय मौसम पूर्वानुमान जांचें। बेहतर परिणाम और उपकरण की कम थकान के लिए सुबह जल्दी काम करने की सलाह दी जाती है। मिट्टी की नमी के स्तर की निगरानी करें और खेत की स्थिति के अनुसार अपना तरीका बदलें।`,
+            mr: `${location} मध्ये ${equipmentType} सह ${activity} चे काम सध्याच्या परिस्थितीत करता येते. अचूक वेळेसाठी स्थानिक हवामान अंदाज तपासा. चांगल्या परिणामांसाठी आणि उपकरणांवर कमी ताण येण्यासाठी सकाळी लवकर काम करण्याची शिफारस केली जाते. मातीतील ओलाव्याचे प्रमाण तपासा आणि शेताच्या परिस्थितीनुसार तुमचा दृष्टिकोन बदला.`
+        };
+        return recommendations[langKey];
     }
 
     /**
-     * Default suggestions
+     * Default step-by-step guide - Multilingual
      */
-    getDefaultSuggestions(equipmentType) {
-        return [
-            `Start operations early at 6:00-6:30 AM for cooler temperatures and better fuel efficiency`,
-            `Keep ${equipmentType} well-maintained - check oil, filters, and tire pressure before use`,
-            `Plan your field coverage pattern to minimize turns and fuel consumption`,
-            `Keep water and refreshments available for operators to stay hydrated`,
-            `Document any issues for future reference and equipment scheduling`
-        ];
+    getDefaultSteps(activity, equipmentType, language = 'en') {
+        const langKey = this.getLangKey(language);
+        const steps = {
+            en: [
+                `Step 1: Check weather conditions and ensure ${equipmentType} is fueled and maintained`,
+                `Step 2: Start ${activity} from the most accessible area of your field around 6-7 AM`,
+                `Step 3: Take a break during peak heat hours (12-2 PM) to rest and refuel equipment`,
+                `Step 4: Resume operations in the afternoon (3-6 PM) and complete remaining areas`,
+                `Step 5: Clean and store ${equipmentType} properly after use to extend equipment life`
+            ],
+            hi: [
+                `चरण 1: मौसम की स्थिति जांचें और सुनिश्चित करें कि ${equipmentType} में ईंधन है`,
+                `चरण 2: सुबह 6-7 बजे अपने खेत के सबसे सुलभ क्षेत्र से ${activity} शुरू करें`,
+                `चरण 3: दोपहर की गर्मी (12-2 बजे) में आराम करें और उपकरण में ईंधन भरें`,
+                `चरण 4: दोपहर बाद (3-6 बजे) काम फिर से शुरू करें और शेष क्षेत्र पूरा करें`,
+                `चरण 5: उपकरण की आयु बढ़ाने के लिए ${equipmentType} को उपयोग के बाद ठीक से साफ करें और रखें`
+            ],
+            mr: [
+                `चरण 1: हवामान परिस्थिती तपासा आणि ${equipmentType} मध्ये इंधन असल्याची खात्री करा`,
+                `चरण 2: सकाळी 6-7 वाजता तुमच्या शेताच्या सर्वात सुलभ भागातून ${activity} सुरू करा`,
+                `चरण 3: दुपारच्या उन्हात (12-2 वाजता) विश्रांती घ्या आणि उपकरणात इंधन भरा`,
+                `चरण 4: दुपारनंतर (3-6 वाजता) काम पुन्हा सुरू करा आणि उर्वरित भाग पूर्ण करा`,
+                `चरण 5: उपकरणाचे आयुष्य वाढवण्यासाठी ${equipmentType} वापरानंतर व्यवस्थित स्वच्छ करा आणि ठेवा`
+            ]
+        };
+        return steps[langKey];
+    }
+
+    /**
+     * Default suggestions - Multilingual
+     */
+    getDefaultSuggestions(equipmentType, language = 'en') {
+        const langKey = this.getLangKey(language);
+        const suggestions = {
+            en: [
+                `Start operations early at 6:00-6:30 AM for cooler temperatures and better fuel efficiency`,
+                `Keep ${equipmentType} well-maintained - check oil, filters, and tire pressure before use`,
+                `Plan your field coverage pattern to minimize turns and fuel consumption`,
+                `Keep water and refreshments available for operators to stay hydrated`,
+                `Document any issues for future reference and equipment scheduling`
+            ],
+            hi: [
+                `ठंडे तापमान और बेहतर ईंधन दक्षता के लिए सुबह 6:00-6:30 बजे जल्दी काम शुरू करें`,
+                `${equipmentType} को अच्छी तरह से रखरखाव करें - उपयोग से पहले तेल, फिल्टर और टायर प्रेशर जांचें`,
+                `मोड़ और ईंधन खपत कम करने के लिए अपने खेत कवरेज पैटर्न की योजना बनाएं`,
+                `ऑपरेटरों को हाइड्रेटेड रखने के लिए पानी और जलपान उपलब्ध रखें`,
+                `भविष्य के संदर्भ के लिए किसी भी समस्या का दस्तावेज बनाएं`
+            ],
+            mr: [
+                `थंड तापमान आणि चांगल्या इंधन कार्यक्षमतेसाठी सकाळी 6:00-6:30 वाजता लवकर काम सुरू करा`,
+                `${equipmentType} चांगले ठेवा - वापरापूर्वी तेल, फिल्टर आणि टायर प्रेशर तपासा`,
+                `वळणे आणि इंधन वापर कमी करण्यासाठी तुमच्या शेत कव्हरेज पॅटर्नचे नियोजन करा`,
+                `ऑपरेटर्सना हायड्रेटेड ठेवण्यासाठी पाणी आणि पेये उपलब्ध ठेवा`,
+                `भविष्यातील संदर्भासाठी कोणत्याही समस्यांचे दस्तऐवजीकरण करा`
+            ]
+        };
+        return suggestions[langKey];
     }
 
     /**
