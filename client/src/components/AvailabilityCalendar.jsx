@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, Check, X, Loader2, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 /**
  * Equipment Availability Calendar

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Smartphone, CreditCard, Wallet, CheckCircle, AlertCircle, Loader2, Copy, ExternalLink, QrCode } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 /**
  * UPI Payment Integration Component

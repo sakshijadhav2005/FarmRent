@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Navigation, Search, Loader2, AlertCircle, Tractor, Filter, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 /**
  * Geolocation Search Component
