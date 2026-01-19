@@ -10,6 +10,99 @@ const axios = require('axios');
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || 'demo';
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
+/**
+ * Get language-specific fallback defaults for Work Planner
+ */
+const getLocalizedDefaults = (language, equipmentType, location, suitability) => {
+    const translations = {
+        en: {
+            stepByStepGuide: [
+                `Step 1: Check weather conditions early morning and ensure ${equipmentType} is fueled`,
+                `Step 2: Start ${equipmentType} operations from the most accessible field area at 6-7 AM`,
+                `Step 3: Take a break during peak heat (12-2 PM) to rest operators and refuel`,
+                `Step 4: Resume operations in the afternoon (3-6 PM) for remaining areas`,
+                `Step 5: Clean and store ${equipmentType} properly after use`
+            ],
+            optimalTiming: {
+                bestHours: '6:00 AM - 10:00 AM',
+                reason: 'Cooler temperatures and lower humidity for better efficiency',
+                avoidHours: '12:00 PM - 3:00 PM (Peak heat causes operator fatigue)'
+            },
+            equipmentTips: [
+                `Check ${equipmentType} oil level and tire pressure before starting`,
+                `Warm up engine for 2-3 minutes before heavy operations`,
+                `Use appropriate speed and settings for current field conditions`,
+                `Clean air filters if operating in dusty conditions`
+            ],
+            localWisdom: `Experienced farmers in ${location} typically start their ${equipmentType} work early in the morning when dew has just dried, ensuring optimal soil and crop conditions for the activity.`,
+            expectedOutcome: `Following this plan should result in efficient ${equipmentType} operations with minimal equipment wear and better productivity. Expected 15-20% improvement over unplanned operations.`,
+            weatherImpact: {
+                currentConditions: `Weather appears ${suitability.toLowerCase()} for ${equipmentType} operations`,
+                preparation: 'Check local weather updates before starting. Keep rain gear and equipment covers ready.',
+                contingency: 'If weather changes suddenly, pause operations and secure equipment'
+            }
+        },
+        hi: {
+            stepByStepGuide: [
+                `चरण 1: सुबह जल्दी मौसम की स्थिति जांचें और सुनिश्चित करें कि ${equipmentType} में ईंधन है`,
+                `चरण 2: सुबह 6-7 बजे खेत के सबसे सुलभ क्षेत्र से ${equipmentType} का काम शुरू करें`,
+                `चरण 3: दोपहर की तेज गर्मी (12-2 बजे) में आराम करें और ईंधन भरें`,
+                `चरण 4: दोपहर बाद (3-6 बजे) शेष क्षेत्रों के लिए काम फिर से शुरू करें`,
+                `चरण 5: उपयोग के बाद ${equipmentType} को ठीक से साफ करें और रखें`
+            ],
+            optimalTiming: {
+                bestHours: 'सुबह 6:00 - 10:00 बजे',
+                reason: 'ठंडा तापमान और कम आर्द्रता से बेहतर दक्षता',
+                avoidHours: 'दोपहर 12:00 - 3:00 बजे (तेज गर्मी से थकान होती है)'
+            },
+            equipmentTips: [
+                `शुरू करने से पहले ${equipmentType} का तेल स्तर और टायर प्रेशर जांचें`,
+                `भारी काम से पहले इंजन को 2-3 मिनट गर्म करें`,
+                `मौजूदा खेत की स्थिति के लिए उचित गति और सेटिंग्स का उपयोग करें`,
+                `धूल भरी परिस्थितियों में एयर फिल्टर साफ करें`
+            ],
+            localWisdom: `${location} के अनुभवी किसान आमतौर पर सुबह जल्दी अपना ${equipmentType} का काम शुरू करते हैं जब ओस सूख जाती है, जिससे मिट्टी और फसल की स्थिति बेहतर रहती है।`,
+            expectedOutcome: `इस योजना का पालन करने से ${equipmentType} का कुशल संचालन होगा, उपकरण की कम टूट-फूट और बेहतर उत्पादकता। बिना योजना के काम की तुलना में 15-20% सुधार की उम्मीद।`,
+            weatherImpact: {
+                currentConditions: `${equipmentType} के काम के लिए मौसम ${suitability === 'Excellent' ? 'उत्कृष्ट' : suitability === 'Good' ? 'अच्छा' : suitability === 'Fair' ? 'ठीक' : 'खराब'} दिखाई देता है`,
+                preparation: 'शुरू करने से पहले स्थानीय मौसम अपडेट देखें। बारिश के कपड़े और उपकरण कवर तैयार रखें।',
+                contingency: 'अगर मौसम अचानक बदल जाए, तो काम रोकें और उपकरण सुरक्षित करें'
+            }
+        },
+        mr: {
+            stepByStepGuide: [
+                `चरण 1: सकाळी लवकर हवामान तपासा आणि ${equipmentType} मध्ये इंधन असल्याची खात्री करा`,
+                `चरण 2: सकाळी 6-7 वाजता शेताच्या सर्वात सुलभ भागातून ${equipmentType} चे काम सुरू करा`,
+                `चरण 3: दुपारच्या तीव्र उन्हात (12-2 वाजता) विश्रांती घ्या आणि इंधन भरा`,
+                `चरण 4: दुपारनंतर (3-6 वाजता) उर्वरित भागांसाठी काम पुन्हा सुरू करा`,
+                `चरण 5: वापरानंतर ${equipmentType} व्यवस्थित स्वच्छ करा आणि ठेवा`
+            ],
+            optimalTiming: {
+                bestHours: 'सकाळी 6:00 - 10:00 वाजता',
+                reason: 'थंड तापमान आणि कमी आर्द्रतेमुळे चांगली कार्यक्षमता',
+                avoidHours: 'दुपारी 12:00 - 3:00 वाजता (तीव्र उष्णतेमुळे थकवा येतो)'
+            },
+            equipmentTips: [
+                `सुरू करण्यापूर्वी ${equipmentType} चे तेल पातळी आणि टायर प्रेशर तपासा`,
+                `जड कामापूर्वी इंजिन 2-3 मिनिटे गरम करा`,
+                `सध्याच्या शेताच्या परिस्थितीनुसार योग्य वेग आणि सेटिंग्स वापरा`,
+                `धुळीच्या परिस्थितीत एअर फिल्टर स्वच्छ करा`
+            ],
+            localWisdom: `${location} मधील अनुभवी शेतकरी सहसा सकाळी लवकर ${equipmentType} चे काम सुरू करतात जेव्हा दव सुकते, ज्यामुळे माती आणि पिकाची स्थिती चांगली राहते.`,
+            expectedOutcome: `या योजनेचे पालन केल्यास ${equipmentType} चे कार्यक्षम संचालन होईल, उपकरणांची कमी झीज आणि चांगली उत्पादकता. नियोजनाशिवाय कामाच्या तुलनेत 15-20% सुधारणा अपेक्षित.`,
+            weatherImpact: {
+                currentConditions: `${equipmentType} च्या कामासाठी हवामान ${suitability === 'Excellent' ? 'उत्कृष्ट' : suitability === 'Good' ? 'चांगले' : suitability === 'Fair' ? 'ठीक' : 'खराब'} दिसते`,
+                preparation: 'सुरू करण्यापूर्वी स्थानिक हवामान अपडेट तपासा. पावसाचे कपडे आणि उपकरण कव्हर तयार ठेवा.',
+                contingency: 'हवामान अचानक बदलल्यास, काम थांबवा आणि उपकरणे सुरक्षित करा'
+            }
+        }
+    };
+
+    // Determine language key (en, hi, or mr)
+    const langKey = language?.startsWith('mr') ? 'mr' : language?.startsWith('hi') ? 'hi' : 'en';
+    return translations[langKey];
+};
+
 // Weather condition ratings for farming
 const getWeatherRating = (weather) => {
     const main = weather.main?.toLowerCase() || '';
@@ -416,7 +509,8 @@ exports.getBookingRecommendation = async (req, res) => {
                 location,
                 `${equipmentType} operations`,
                 equipmentType,
-                startDate
+                startDate,
+                language // Pass language for multi-language support
             );
 
             if (researchFindings.aiRecommendation) {
@@ -442,48 +536,31 @@ exports.getBookingRecommendation = async (req, res) => {
             console.log('Enhanced response failed, using basic response:', err.message);
         }
 
-        // Provide defaults if not set
+        // Provide language-specific defaults if not set
+        const localizedDefaults = getLocalizedDefaults(language, equipmentType, location, suitability);
+
         if (!stepByStepGuide || stepByStepGuide.length === 0) {
-            stepByStepGuide = [
-                `Step 1: Check weather conditions early morning and ensure ${equipmentType} is fueled`,
-                `Step 2: Start ${equipmentType} operations from the most accessible field area at 6-7 AM`,
-                `Step 3: Take a break during peak heat (12-2 PM) to rest operators and refuel`,
-                `Step 4: Resume operations in the afternoon (3-6 PM) for remaining areas`,
-                `Step 5: Clean and store ${equipmentType} properly after use`
-            ];
+            stepByStepGuide = localizedDefaults.stepByStepGuide;
         }
 
         if (!optimalTiming) {
-            optimalTiming = {
-                bestHours: '6:00 AM - 10:00 AM',
-                reason: 'Cooler temperatures and lower humidity for better efficiency',
-                avoidHours: '12:00 PM - 3:00 PM (Peak heat causes operator fatigue)'
-            };
+            optimalTiming = localizedDefaults.optimalTiming;
         }
 
         if (!equipmentTips || equipmentTips.length === 0) {
-            equipmentTips = [
-                `Check ${equipmentType} oil level and tire pressure before starting`,
-                `Warm up engine for 2-3 minutes before heavy operations`,
-                `Use appropriate speed and settings for current field conditions`,
-                `Clean air filters if operating in dusty conditions`
-            ];
+            equipmentTips = localizedDefaults.equipmentTips;
         }
 
         if (!localWisdom) {
-            localWisdom = `Experienced farmers in ${location} typically start their ${equipmentType} work early in the morning when dew has just dried, ensuring optimal soil and crop conditions for the activity.`;
+            localWisdom = localizedDefaults.localWisdom;
         }
 
         if (!expectedOutcome) {
-            expectedOutcome = `Following this plan should result in efficient ${equipmentType} operations with minimal equipment wear and better productivity. Expected 15-20% improvement over unplanned operations.`;
+            expectedOutcome = localizedDefaults.expectedOutcome;
         }
 
         if (!weatherImpact) {
-            weatherImpact = {
-                currentConditions: `Weather appears ${suitability.toLowerCase()} for ${equipmentType} operations`,
-                preparation: 'Check local weather updates before starting. Keep rain gear and equipment covers ready.',
-                contingency: 'If weather changes suddenly, pause operations and secure equipment'
-            };
+            weatherImpact = localizedDefaults.weatherImpact;
         }
 
         res.json({

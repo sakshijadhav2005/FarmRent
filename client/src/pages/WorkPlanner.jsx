@@ -146,78 +146,66 @@ const WorkPlanner = () => {
     const speakResult = (resultData) => {
         if (!speechEnabled || !window.speechSynthesis) return;
 
-        // Stop any current speech
+        // Cancel any pending speech first
         window.speechSynthesis.cancel();
 
-        const currentLang = getCurrentLanguage();
-        let textToSpeak = '';
+        // Small delay to ensure cancel completes
+        setTimeout(() => {
+            const currentLang = getCurrentLanguage();
+            let textToSpeak = '';
 
-        // Get translated activity name
-        const activityOption = activityOptions.find(opt => opt.value === formData.activityType);
-        const translatedActivity = activityOption ? t(activityOption.labelKey) : formData.activityType;
+            // Get translated activity name
+            const activityOption = activityOptions.find(opt => opt.value === formData.activityType);
+            const translatedActivity = activityOption ? t(activityOption.labelKey) : formData.activityType;
 
-        // Create language-specific speech text
-        if (currentLang === 'mr-IN') {
-            textToSpeak = `${formData.location} मध्ये ${translatedActivity} साठी योग्यता विश्लेषण. `;
-            textToSpeak += `एकूण गुण: ${resultData.overallScore} टक्के. `;
-            textToSpeak += `${resultData.suitability} परिस्थिती. `;
-            textToSpeak += `${resultData.recommendation} `;
-
-            if (resultData.warnings && resultData.warnings.length > 0) {
-                textToSpeak += `चेतावणी: ${resultData.warnings.join('. ')} `;
+            // Create language-specific speech text (shorter version to avoid interruptions)
+            if (currentLang === 'mr-IN') {
+                textToSpeak = `${formData.location} मध्ये ${translatedActivity} साठी विश्लेषण. `;
+                textToSpeak += `एकूण गुण: ${resultData.overallScore} टक्के. `;
+                textToSpeak += `${resultData.suitability} परिस्थिती.`;
+            } else if (currentLang === 'hi-IN') {
+                textToSpeak = `${formData.location} में ${translatedActivity} के लिए विश्लेषण. `;
+                textToSpeak += `कुल अंक: ${resultData.overallScore} प्रतिशत. `;
+                textToSpeak += `${resultData.suitability} स्थितियां.`;
+            } else {
+                // English (default)
+                textToSpeak = `Analysis for ${translatedActivity} in ${formData.location}. `;
+                textToSpeak += `Overall score: ${resultData.overallScore} percent. `;
+                textToSpeak += `${resultData.suitability} conditions.`;
             }
 
-            if (resultData.suggestions && resultData.suggestions.length > 0) {
-                textToSpeak += `सूचना: ${resultData.suggestions.join('. ')}`;
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = currentLang;
+            utterance.rate = 0.85;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            // Get voices (ensure they're loaded)
+            let voices = window.speechSynthesis.getVoices();
+
+            // If voices aren't loaded yet, wait for them
+            if (voices.length === 0) {
+                window.speechSynthesis.onvoiceschanged = () => {
+                    voices = window.speechSynthesis.getVoices();
+                    setVoiceAndSpeak(utterance, voices, currentLang);
+                };
+            } else {
+                setVoiceAndSpeak(utterance, voices, currentLang);
             }
-        } else if (currentLang === 'hi-IN') {
-            textToSpeak = `${formData.location} में ${translatedActivity} के लिए उपयुक्तता विश्लेषण. `;
-            textToSpeak += `कुल अंक: ${resultData.overallScore} प्रतिशत. `;
-            textToSpeak += `${resultData.suitability} स्थितियां. `;
-            textToSpeak += `${resultData.recommendation} `;
+        }, 100); // Small delay after cancel
+    };
 
-            if (resultData.warnings && resultData.warnings.length > 0) {
-                textToSpeak += `चेतावनी: ${resultData.warnings.join('. ')} `;
-            }
-
-            if (resultData.suggestions && resultData.suggestions.length > 0) {
-                textToSpeak += `सुझाव: ${resultData.suggestions.join('. ')}`;
-            }
-        } else {
-            // English (default)
-            textToSpeak = `Suitability analysis for ${translatedActivity} in ${formData.location}. `;
-            textToSpeak += `Overall score: ${resultData.overallScore} percent. `;
-            textToSpeak += `${resultData.suitability} conditions. `;
-            textToSpeak += `${resultData.recommendation} `;
-
-            if (resultData.warnings && resultData.warnings.length > 0) {
-                textToSpeak += `Warnings: ${resultData.warnings.join('. ')} `;
-            }
-
-            if (resultData.suggestions && resultData.suggestions.length > 0) {
-                textToSpeak += `Suggestions: ${resultData.suggestions.join('. ')}`;
-            }
-        }
-
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = currentLang;
-        utterance.rate = 0.8;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-
-        // Enhanced voice selection for Indian languages
-        const voices = window.speechSynthesis.getVoices();
+    // Helper function to set voice and speak
+    const setVoiceAndSpeak = (utterance, voices, currentLang) => {
         let selectedVoice = null;
 
         if (currentLang === 'hi-IN') {
-            // Prefer Hindi voices
             selectedVoice = voices.find(v =>
                 v.lang === 'hi-IN' ||
                 v.lang === 'hi' ||
                 v.name.toLowerCase().includes('hindi')
             );
         } else if (currentLang === 'mr-IN') {
-            // Prefer Marathi voices (fallback to Hindi if not available)
             selectedVoice = voices.find(v =>
                 v.lang === 'mr-IN' ||
                 v.lang === 'mr' ||
@@ -227,7 +215,6 @@ const WorkPlanner = () => {
                 v.lang === 'hi'
             );
         } else {
-            // English voices
             selectedVoice = voices.find(v =>
                 v.lang === 'en-IN' ||
                 v.lang === 'en-US' ||
@@ -241,7 +228,13 @@ const WorkPlanner = () => {
 
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
+        utterance.onerror = (event) => {
+            // Only log non-interrupted errors (interrupted is normal when user cancels)
+            if (event.error !== 'interrupted') {
+                console.error('Speech synthesis error:', event.error);
+            }
+            setIsSpeaking(false);
+        };
 
         window.speechSynthesis.speak(utterance);
     };

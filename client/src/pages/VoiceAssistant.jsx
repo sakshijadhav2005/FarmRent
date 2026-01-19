@@ -75,47 +75,44 @@ const VoiceAssistant = () => {
     const transcriptRef = useRef('');
     const [voicesLoaded, setVoicesLoaded] = useState(false);
 
-    // Auto-speak welcome message when component mounts and voices are ready
+    // Single consolidated welcome speech effect - prevents multiple overlapping attempts
     useEffect(() => {
-        if (voicesLoaded && !hasSpokenWelcome) {
-            // Speak immediately when voices are loaded
+        let welcomeTimer = null;
+        let hasSpoken = false;
+
+        const speakWelcome = () => {
+            if (hasSpoken || hasSpokenWelcome || isSpeaking || isListening) return;
+
+            hasSpoken = true;
             const welcomeMessage = language === 'mr-IN'
-                ? 'नमस्कार! मी तुमचा शेती सल्लागार आहे. मी Google Gemini AI वापरून तुम्हाला तपशीलवार शेतीविषयक सल्ला देतो. तुम्ही मराठी, हिंदी किंवा इंग्रजीमध्ये बोलू शकता. माईकवर टॅप करा आणि मला काहीही विचारा!'
+                ? 'नमस्कार! मी तुमचा शेती सल्लागार आहे. माईकवर टॅप करा आणि मला काहीही विचारा!'
                 : language === 'hi-IN'
-                    ? 'नमस्ते! मैं आपका खेती सलाहकार हूं. मैं Google Gemini AI का उपयोग करके आपको विस्तृत कृषि सलाह देता हूं. आप मराठी, हिंदी या अंग्रेजी में बोल सकते हैं. माइक पर टैप करें और मुझसे कुछ भी पूछें!'
-                    : 'Hello! I am your farming advisor. I use Google Gemini AI to provide detailed agricultural advice. You can speak in Marathi, Hindi, or English. Tap the microphone and ask me anything about farming!';
+                    ? 'नमस्ते! मैं आपका खेती सलाहकार हूं. माइक पर टैप करें और मुझसे कुछ भी पूछें!'
+                    : 'Hello! I am your farming advisor. Tap the microphone and ask me anything!';
 
-            // Small delay to ensure page is fully loaded
-            const timer = setTimeout(() => {
-                speak(welcomeMessage);
-                setHasSpokenWelcome(true);
-            }, 1000); // Reduced to 1 second for faster response
+            speak(welcomeMessage);
+            setHasSpokenWelcome(true);
+        };
 
-            return () => clearTimeout(timer);
+        // Wait for voices to load, or use fallback timer
+        if (voicesLoaded && !hasSpokenWelcome) {
+            welcomeTimer = setTimeout(speakWelcome, 1500);
+        } else if (!hasSpokenWelcome) {
+            // Fallback: speak after 3 seconds even if voices not loaded
+            welcomeTimer = setTimeout(speakWelcome, 3000);
         }
-    }, [voicesLoaded, hasSpokenWelcome, language]);
 
-    // Force welcome speech on page load (fallback)
-    useEffect(() => {
-        // Try to speak welcome after 3 seconds even if voices aren't fully loaded
-        const fallbackTimer = setTimeout(() => {
-            if (!hasSpokenWelcome && !isSpeaking && !isListening) {
-                const welcomeMessage = language === 'mr-IN'
-                    ? 'नमस्कार! मी तुमचा शेती सल्लागार आहे. माईकवर टॅप करा आणि मला काहीही विचारा!'
-                    : language === 'hi-IN'
-                        ? 'नमस्ते! मैं आपका खेती सलाहकार हूं. माइक पर टैप करें और मुझसे कुछ भी पूछें!'
-                        : 'Hello! I am your farming advisor. Tap the microphone and ask me anything!';
-
-                speak(welcomeMessage);
-                setHasSpokenWelcome(true);
-            }
-        }, 3000);
-
-        return () => clearTimeout(fallbackTimer);
-    }, [language]); // Only run when language changes or component mounts
+        return () => {
+            if (welcomeTimer) clearTimeout(welcomeTimer);
+        };
+    }, [voicesLoaded, language]); // Removed hasSpokenWelcome from deps to prevent re-triggering
 
     // Reset welcome spoken flag when language changes
     useEffect(() => {
+        // Cancel any ongoing speech when language changes
+        if (synthRef.current) {
+            synthRef.current.cancel();
+        }
         setHasSpokenWelcome(false);
     }, [language]);
 
@@ -217,32 +214,8 @@ const VoiceAssistant = () => {
             // Fallback: try loading voices after a delay
             setTimeout(loadVoices, 1000);
 
-            // Force welcome speech even without full voice loading
-            setTimeout(() => {
-                if (!hasSpokenWelcome) {
-                    const quickWelcome = language === 'mr-IN'
-                        ? 'नमस्कार! स्वागत आहे!'
-                        : language === 'hi-IN'
-                            ? 'नमस्ते! स्वागत है!'
-                            : 'Hello! Welcome!';
-
-                    const utterance = new SpeechSynthesisUtterance(quickWelcome);
-                    utterance.lang = language;
-                    utterance.onend = () => {
-                        // After quick welcome, speak full message
-                        setTimeout(() => {
-                            const fullWelcome = language === 'mr-IN'
-                                ? 'मी तुमचा शेती सल्लागार आहे. माईकवर टॅप करा आणि मला काहीही विचारा!'
-                                : language === 'hi-IN'
-                                    ? 'मैं आपका खेती सलाहकार हूं. माइक पर टैप करें और मुझसे कुछ भी पूछें!'
-                                    : 'I am your farming advisor. Tap the microphone and ask me anything!';
-                            speak(fullWelcome);
-                        }, 500);
-                    };
-                    synthRef.current.speak(utterance);
-                    setHasSpokenWelcome(true);
-                }
-            }, 1500); // Speak after 1.5 seconds regardless
+            // Note: Welcome speech is now handled by the consolidated useEffect above
+            // Removed duplicate speech attempt to prevent "interrupted" errors
         }
 
         return () => {
@@ -377,7 +350,10 @@ const VoiceAssistant = () => {
         };
 
         utterance.onerror = (event) => {
-            console.error('Speech synthesis error:', event);
+            // "interrupted" is normal when speech is cancelled, not an error
+            if (event.error !== 'interrupted') {
+                console.error('Speech synthesis error:', event.error);
+            }
             setIsSpeaking(false);
             setVoiceInterrupted(false);
         };

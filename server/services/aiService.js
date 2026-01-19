@@ -1,8 +1,9 @@
 const axios = require('axios');
 
-// AI Provider Configuration
-const GEMINI_API_KEY = 'AIzaSyCs3tXLYyCv5eJrlZ7jZW9j7MIm0WOc8C4';
-console.log('Loaded GEMINI_API_KEY:', GEMINI_API_KEY ? `${GEMINI_API_KEY.substring(0, 10)}...` : 'NOT SET');
+// AI Provider Configuration - Uses environment variable for security
+// NEVER hardcode API keys in code - they get leaked when pushed to GitHub
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+console.log('Loaded GEMINI_API_KEY:', GEMINI_API_KEY ? `${GEMINI_API_KEY.substring(0, 10)}...` : 'NOT SET - Add to .env file');
 // Using v1beta for reliable free tier access
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -155,12 +156,12 @@ const generateAIResponse = async (userMessage, context = {}) => {
                         topP: 0.8
                     }
                 },
-                { 
-                    headers: { 
+                {
+                    headers: {
                         'Content-Type': 'application/json',
                         'x-goog-api-key': GEMINI_API_KEY
-                    }, 
-                    timeout: 20000 
+                    },
+                    timeout: 20000
                 }
             );
 
@@ -191,7 +192,7 @@ const analyzeImage = async (base64Image, mimeType = 'image/jpeg', userPrompt = '
             // Try v1 for stable models, v1beta for -latest versions
             const apiVersion = model.includes('latest') ? 'v1beta' : 'v1beta';
             const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent`;
-            
+
             console.log(`Trying vision model: ${model}, URL: ${url}`);
             console.log(`API Key (first 10 chars): ${GEMINI_API_KEY.substring(0, 10)}...`);
 
@@ -215,12 +216,12 @@ const analyzeImage = async (base64Image, mimeType = 'image/jpeg', userPrompt = '
                         topP: 0.8
                     }
                 },
-                { 
-                    headers: { 
+                {
+                    headers: {
                         'Content-Type': 'application/json',
                         'x-goog-api-key': GEMINI_API_KEY
-                    }, 
-                    timeout: 30000 
+                    },
+                    timeout: 30000
                 }
             );
 
