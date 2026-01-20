@@ -36,7 +36,9 @@ export const getImageUrl = (imagePath, fallback = "https://images.unsplash.com/p
         return imagePath;
     }
     // For local uploads, prepend server base URL
-    return `${SERVER_BASE_URL}${imagePath}`;
+    // Ensure there's a slash between server URL and image path
+    const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${SERVER_BASE_URL}${path}`;
 };
 
 export const registerUser = async (formData) => {
