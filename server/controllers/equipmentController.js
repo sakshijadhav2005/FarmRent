@@ -50,8 +50,12 @@ exports.createEquipment = async (req, res) => {
 
         // If a file was uploaded, add its URL (Cloudinary/S3/R2) or local path to the request body
         if (req.file) {
+            // Debug: Log what multer/cloudinary returned
+            console.log('[UPLOAD DEBUG] File object:', JSON.stringify(req.file, null, 2));
+
             // cloudinary uses 'path', multer-s3 provides 'location'
             req.body.image = req.file.path || req.file.location || `/uploads/${req.file.filename}`;
+            console.log('[UPLOAD DEBUG] Final image URL:', req.body.image);
         }
 
         const equipment = await Equipment.create(req.body);

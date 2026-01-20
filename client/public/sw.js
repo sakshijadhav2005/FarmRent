@@ -40,9 +40,9 @@
 // ============================================
 
 // Cache version names - update these when making changes
-const CACHE_NAME = 'farmlink-v1';          // Main cache identifier
-const STATIC_CACHE = 'farmlink-static-v1';  // For pre-cached essential assets
-const DYNAMIC_CACHE = 'farmlink-dynamic-v1'; // For dynamically cached resources
+const CACHE_NAME = 'farmlink-v2';          // Main cache identifier
+const STATIC_CACHE = 'farmlink-static-v2';  // For pre-cached essential assets
+const DYNAMIC_CACHE = 'farmlink-dynamic-v2'; // For dynamically cached resources
 
 // List of assets to pre-cache during installation
 // These will be available immediately, even offline
@@ -90,6 +90,25 @@ self.addEventListener('fetch', (event) => {
 
     // Skip non-GET requests
     if (request.method !== 'GET') return;
+
+    // Skip external URLs (like Cloudinary, CDNs, etc.) - let browser handle them directly
+    if (url.origin !== self.location.origin) {
+        // For external images, just fetch from network without caching
+        if (request.destination === 'image') {
+            event.respondWith(
+                fetch(request).catch(() => {
+                    // Return a transparent 1x1 pixel as fallback for external images
+                    return new Response(
+                        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                        { headers: { 'Content-Type': 'image/gif' } }
+                    );
+                })
+            );
+            return;
+        }
+        // For other external resources, just fetch normally
+        return;
+    }
 
     // Skip API requests from caching (always go to network)
     if (url.pathname.startsWith('/api/')) {
@@ -155,9 +174,12 @@ self.addEventListener('fetch', (event) => {
                         return response;
                     })
                     .catch(() => {
-                        // Return placeholder for images
+                        // Return a proper fallback for images (transparent pixel)
                         if (request.destination === 'image') {
-                            return caches.match('/icons/placeholder.png');
+                            return new Response(
+                                '',
+                                { status: 404, statusText: 'Image not found' }
+                            );
                         }
                         return new Response('Offline', { status: 503 });
                     });
