@@ -7,6 +7,10 @@ const path = require('path');
 const session = require('express-session');
 const passport = require('./config/passport');
 const connectDB = require('./db/db');
+
+// Import utilities
+const logger = require('./utils/logger');
+const errorHandler = require('./middleware/errorHandler');
 const dashboardRoutes = require('./routes/dashboard');
 const authRoutes = require('./routes/auth');
 const equipmentRoutes = require('./routes/equipment');
@@ -64,11 +68,14 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Request logger
+// Request logger using Winston
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        console.log('Body:', JSON.stringify(req.body));
+    logger.http(`${req.method} ${req.originalUrl}`, {
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+    });
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && process.env.NODE_ENV === 'development') {
+        logger.debug('Request body:', { body: req.body });
     }
     next();
 });
@@ -80,7 +87,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 (async () => {
     const connected = await connectDB();
     if (!connected) {
-        console.error('Failed to connect to database. Exiting.');
+        logger.error('Failed to connect to database. Exiting.');
         process.exit(1);
         return;
     }
@@ -106,26 +113,30 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
         res.send('Farm Equipment Rental API is running');
     });
 
-    // Basic Error handling
-    app.use((err, req, res, next) => {
-        console.error(err.stack);
-        res.status(500).send('Something broke!');
+    // 404 handler for unmatched routes
+    app.use((req, res, next) => {
+        const ApiError = require('./utils/ApiError');
+        next(ApiError.notFound(`Route ${req.originalUrl} not found`));
     });
+
+    // Global Error Handler (must be last middleware)
+    app.use(errorHandler);
 
     // Start Server with error handling for EADDRINUSE
     const server = app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        logger.info(`🚀 Server running on port ${PORT}`);
+        logger.info(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 
     server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
             const fallbackPort = Number(PORT) + 1;
-            console.warn(`Port ${PORT} in use, attempting to start on port ${fallbackPort}`);
+            logger.warn(`Port ${PORT} in use, attempting to start on port ${fallbackPort}`);
             server.close(() => {
-                app.listen(fallbackPort, () => console.log(`Server running on port ${fallbackPort}`));
+                app.listen(fallbackPort, () => logger.info(`Server running on port ${fallbackPort}`));
             });
         } else {
-            console.error('Server error:', err);
+            logger.error('Server error:', { error: err.message, stack: err.stack });
             process.exit(1);
         }
     });
